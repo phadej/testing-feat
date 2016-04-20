@@ -1,3 +1,4 @@
+{-#Language CPP#-}
 {-#Language TemplateHaskell#-}
 module Test.Feat.Internals.Derive where
 import Language.Haskell.TH
@@ -20,8 +21,13 @@ mkInstanceType cn dn vns = appT (conT cn) (foldl (appT) (conT dn) (map varT vns)
 
 extractData :: Name -> Q (Cxt, [Name], [Con])
 extractData n = reify n >>= \i -> return $ case i of
+#if MIN_VERSION_template_haskell(2,11,0)
+  TyConI (DataD cxt _ tvbs _ cons _)   -> (cxt, map tvbName tvbs, cons)
+  TyConI (NewtypeD cxt _ tvbs _ con _) -> (cxt, map tvbName tvbs, [con])
+#else
   TyConI (DataD cxt _ tvbs cons _)   -> (cxt, map tvbName tvbs, cons)
   TyConI (NewtypeD cxt _ tvbs con _) -> (cxt, map tvbName tvbs, [con])
+#endif
   _ -> error $ "Unexpected info: " ++ show (ppr i)
 
 tvbName :: TyVarBndr -> Name
